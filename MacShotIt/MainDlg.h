@@ -28,6 +28,7 @@ public:
 		MSG_WM_LBUTTONDOWN(OnLButtonDown)
 		MSG_WM_LBUTTONUP(OnLButtonUp)
 		MSG_WM_MOUSEMOVE(OnMouseMove)
+		MSG_WM_LBUTTONDBLCLK(OnMouseDBLClick)
 	END_MSG_MAP()
 
 // Handler prototypes (uncomment arguments if needed):
@@ -45,25 +46,41 @@ public:
 //////////////////////////////////////////////////////////////////////////
 // Helper function
 private:
+
+	enum MOUSE_TYPE
+	{
+		MT_NONE,
+		MT_MAKERECT,
+		MT_MOVE,
+		MT_TOPLEFT,
+		MT_TOPRIGHT,
+		MT_BOTLEFT,
+		MT_BOTRIGHT
+	};
+	MOUSE_TYPE	m_mt;
+
 	bool TakeScreenShot();
 	int GetEncoderClsid(const   WCHAR*   format,   CLSID*   pClsid);
-	void MakeRect();
+	void MakeRect(const CPoint& pt1, const CPoint& pt2);
 	void SaveImage();
 	void DrawHighlightBox(Graphics& grap);
+	void ChangeCursor(MOUSE_TYPE mt);
 
 //////////////////////////////////////////////////////////////////////////
 // Member data
 private:
 	Bitmap* m_pImg;
 	CPoint m_startPT;
-	CPoint m_endPT;
+// 	CPoint m_endPT;
 	CRect  m_rc;
 	bool   m_bClicked;
 	ATL::CStringW m_path;
+	HCURSOR m_cursor;
 	LRESULT OnPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnEraseBkgnd(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnSetCursor(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnLButtonDown(UINT nFlag, CPoint pt);
 	LRESULT OnLButtonUp(UINT nFlag, CPoint pt);
+	LRESULT OnMouseDBLClick(UINT nFlag, CPoint pt);
 	void OnMouseMove(UINT nFlag, CPoint pt);
 };

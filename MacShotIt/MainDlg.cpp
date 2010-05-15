@@ -25,6 +25,9 @@ LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	// center the dialog on the screen
 	CenterWindow();
 
+	m_mt = MT_NONE;
+	ChangeCursor(m_mt);
+
 	// set icons
 	HICON hIcon = (HICON)::LoadImage(_Module.GetResourceInstance(), MAKEINTRESOURCE(IDR_MAINFRAME), 
 		IMAGE_ICON, ::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON), LR_DEFAULTCOLOR);
@@ -60,10 +63,8 @@ LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	// Initial mouse point
 	m_startPT.x = -1;
 	m_startPT.y = -1;
-	m_endPT.x = -1;
-	m_endPT.y = -1;
 	m_rc = CRect(0, 0, 0, 0);
-	m_bClicked = false;
+//	m_bClicked = false;
 
 	// Initial desktop folder and file name
 	int nFolder = CSIDL_DESKTOPDIRECTORY;
@@ -222,51 +223,105 @@ LRESULT CMainDlg::OnEraseBkgnd(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 }
 LRESULT CMainDlg::OnSetCursor(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	HINSTANCE hInst = _AtlBaseModule.GetResourceInstance();
-	HCURSOR cursor = LoadCursor(hInst, MAKEINTRESOURCE(IDC_CURSMAIN));
-	SetCursor(cursor);
+	SetCursor(m_cursor);
 	return 0;
+}
+
+void CMainDlg::ChangeCursor(CMainDlg::MOUSE_TYPE mt)
+{
+	HINSTANCE hInst = _AtlBaseModule.GetResourceInstance();
+	if (mt == MT_NONE)
+	{
+		m_cursor = LoadCursor(hInst, MAKEINTRESOURCE(IDC_CURSMAIN));
+	}
+	if (mt == MT_MOVE)
+	{
+		m_cursor = LoadCursor(NULL, IDC_SIZEALL);
+	}
 }
 
 LRESULT CMainDlg::OnLButtonDown(UINT nFlag, CPoint pt)
 {
+	ATLTRACE("Left button down.\n");
+
+	if (m_rc.PtInRect(pt))
+	{
+		m_mt = MT_MOVE;
+	}
+	else if (m_rc.Size() == CSize(0, 0))
+	{
+		m_mt = MT_MAKERECT;
+	}
+
 	m_startPT = pt;
-	m_bClicked = true;
+//	m_bClicked = true;
 
 	return 0;
 }
 
+LRESULT CMainDlg::OnMouseDBLClick(UINT nFlag, CPoint pt)
+{
+	ATLTRACE("Doublick button down.\n");
+	if (m_rc.PtInRect(pt))
+	{
+		SaveImage();
+		CloseDialog(1);
+	}
+	return 0;
+}
+
+
 void CMainDlg::OnMouseMove(UINT nFlag, CPoint pt)
 {
-	if (m_bClicked)
+	if (m_rc.PtInRect(pt))
+		ChangeCursor(MT_MOVE);
+	else
+		ChangeCursor(MT_NONE);
+
+	if (m_mt == MT_NONE)
+		return;
+
+	if (m_mt == MT_MAKERECT)
 	{
-		m_endPT = pt;
-		MakeRect();
-		//InvalidateRect(&m_rc);
-		Invalidate();
+		MakeRect(m_startPT, pt);
 	}
+
+	if (m_mt == MT_MOVE)
+	{
+		int dx = pt.x - m_startPT.x;
+		int dy = pt.y - m_startPT.y;
+		m_rc.OffsetRect(CSize(dx, dy));
+		m_startPT = pt;
+	}
+
+
+//	InvalidateRect(&m_rc);
+	Invalidate();
 }
 
 LRESULT CMainDlg::OnLButtonUp(UINT nFlag, CPoint pt)
 {
-	if (m_startPT == CPoint(-1, -1))
-		CloseDialog(0);
+// 	if (m_startPT == CPoint(-1, -1))
+// 		CloseDialog(0);
 
-	m_endPT = pt;
+// 	m_endPT = pt;
+//	m_bClicked = false;
 
-	SaveImage();
+//	SaveImage();
 
-	CloseDialog(1);
+//	CloseDialog(1);
+
+	m_mt = MT_NONE;
 
 	return 0;
 }
 
-void CMainDlg::MakeRect()
+void CMainDlg::MakeRect(const CPoint& pt1, const CPoint& pt2)
 {
-	m_rc.left = m_startPT.x <= m_endPT.x ? m_startPT.x : m_endPT.x;
-	m_rc.top = m_startPT.y <= m_endPT.y ? m_startPT.y : m_endPT.y;
-	m_rc.right = m_startPT.x >= m_endPT.x ? m_startPT.x : m_endPT.x;
-	m_rc.bottom = m_startPT.y >= m_endPT.y ? m_startPT.y : m_endPT.y;
+	m_rc.left = pt1.x <= pt2.x ? pt1.x : pt2.x;
+	m_rc.top = pt1.y <= pt2.y ? pt1.y : pt2.y;
+	m_rc.right = pt1.x >= pt2.x ? pt1.x : pt2.x;
+	m_rc.bottom = pt1.y >= pt2.y ? pt1.y : pt2.y;
 }
 
 void CMainDlg::SaveImage()
@@ -292,4 +347,6 @@ void CMainDlg::DrawHighlightBox(Graphics& grap)
 	SolidBrush brush(Color(100, 128, 255, 128));
 	grap.FillRectangle(&brush, m_rc.left, m_rc.top, m_rc.Width(), m_rc.Height());
 	grap.DrawRectangle(&pen, m_rc.left, m_rc.top, m_rc.Width(), m_rc.Height());
+
+	// Draw 
 }
