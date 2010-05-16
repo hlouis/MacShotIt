@@ -10,6 +10,8 @@
 
 #include "Utility.h"
 
+const int BORDER_WIDTH = 5;
+
 BOOL CMainDlg::PreTranslateMessage(MSG* pMsg)
 {
 	return CWindow::IsDialogMessage(pMsg);
@@ -238,13 +240,46 @@ void CMainDlg::ChangeCursor(CMainDlg::MOUSE_TYPE mt)
 	{
 		m_cursor = LoadCursor(NULL, IDC_SIZEALL);
 	}
+	if (mt == MT_LEFT)
+	{
+		m_cursor = LoadCursor(NULL, IDC_SIZEWE);
+	}
+	if (mt == MT_RIGHT)
+	{
+		m_cursor = LoadCursor(NULL, IDC_SIZEWE);
+	}
+	if (mt == MT_TOP)
+	{
+		m_cursor = LoadCursor(NULL, IDC_SIZENS);
+	}
+	if (mt == MT_BOTTOM)
+	{
+		m_cursor = LoadCursor(NULL, IDC_SIZENS);
+	}
+
 }
 
 LRESULT CMainDlg::OnLButtonDown(UINT nFlag, CPoint pt)
 {
 	ATLTRACE("Left button down.\n");
 
-	if (m_rc.PtInRect(pt))
+	if (m_border_l.PtInRect(pt))
+	{
+		m_mt = MT_LEFT;
+	}
+	else if (m_border_r.PtInRect(pt))
+	{
+		m_mt = MT_RIGHT;
+	}
+	else if (m_border_b.PtInRect(pt))
+	{
+		m_mt = MT_BOTTOM;
+	}
+	else if (m_border_t.PtInRect(pt))
+	{
+		m_mt = MT_TOP;
+	}
+	else if (m_rc.PtInRect(pt))
 	{
 		m_mt = MT_MOVE;
 	}
@@ -273,7 +308,23 @@ LRESULT CMainDlg::OnMouseDBLClick(UINT nFlag, CPoint pt)
 
 void CMainDlg::OnMouseMove(UINT nFlag, CPoint pt)
 {
-	if (m_rc.PtInRect(pt))
+	if (m_border_l.PtInRect(pt))
+	{
+		ChangeCursor(MT_LEFT);
+	}
+	else if (m_border_r.PtInRect(pt))
+	{
+		ChangeCursor(MT_RIGHT);
+	}
+	else if (m_border_b.PtInRect(pt))
+	{
+		ChangeCursor(MT_BOTTOM);
+	}
+	else if (m_border_t.PtInRect(pt))
+	{
+		ChangeCursor(MT_TOP);
+	}
+	else if (m_rc.PtInRect(pt))
 		ChangeCursor(MT_MOVE);
 	else
 		ChangeCursor(MT_NONE);
@@ -285,12 +336,42 @@ void CMainDlg::OnMouseMove(UINT nFlag, CPoint pt)
 	{
 		MakeRect(m_startPT, pt);
 	}
-
-	if (m_mt == MT_MOVE)
+	else if (m_mt == MT_MOVE)
 	{
 		int dx = pt.x - m_startPT.x;
 		int dy = pt.y - m_startPT.y;
-		m_rc.OffsetRect(CSize(dx, dy));
+		CSize delta(dx, dy);
+		MakeRect(m_rc.TopLeft() + delta, m_rc.BottomRight() + delta);
+		m_startPT = pt;
+	}
+	else
+	{
+		// resize the rect
+		int dx = 0, dy = 0;
+		if (m_mt == MT_LEFT)
+		{
+			dx = pt.x - m_startPT.x;
+			CSize delta(dx, dy);
+			MakeRect(m_rc.TopLeft() + delta, m_rc.BottomRight());
+		}
+		if (m_mt == MT_RIGHT)
+		{
+			dx = pt.x - m_startPT.x;
+			CSize delta(dx, dy);
+			MakeRect(m_rc.TopLeft(), m_rc.BottomRight() + delta);
+		}
+		if (m_mt == MT_BOTTOM)
+		{
+			dy = pt.y - m_startPT.y;
+			CSize delta(dx, dy);
+			MakeRect(m_rc.TopLeft(), m_rc.BottomRight() + delta);
+		}
+		if (m_mt == MT_TOP)
+		{
+			dy = pt.y - m_startPT.y;
+			CSize delta(dx, dy);
+			MakeRect(m_rc.TopLeft() + delta, m_rc.BottomRight());
+		}
 		m_startPT = pt;
 	}
 
@@ -322,6 +403,11 @@ void CMainDlg::MakeRect(const CPoint& pt1, const CPoint& pt2)
 	m_rc.top = pt1.y <= pt2.y ? pt1.y : pt2.y;
 	m_rc.right = pt1.x >= pt2.x ? pt1.x : pt2.x;
 	m_rc.bottom = pt1.y >= pt2.y ? pt1.y : pt2.y;
+
+	m_border_l = CRect(m_rc.left - BORDER_WIDTH, m_rc.top - BORDER_WIDTH, m_rc.left, m_rc.bottom + BORDER_WIDTH);
+	m_border_t = CRect(m_rc.left, m_rc.top - BORDER_WIDTH, m_rc.right, m_rc.top);
+	m_border_r = CRect(m_rc.right, m_rc.top - BORDER_WIDTH, m_rc.right + BORDER_WIDTH, m_rc.bottom + BORDER_WIDTH);
+	m_border_b = CRect(m_rc.left, m_rc.bottom, m_rc.right, m_rc.bottom + BORDER_WIDTH);
 }
 
 void CMainDlg::SaveImage()
@@ -343,10 +429,17 @@ void CMainDlg::DrawHighlightBox(Graphics& grap)
 	if (m_rc.IsRectEmpty() || m_rc.IsRectNull())
 		return;
 	
-	Pen pen(Color(255, 128, 255, 128));
-	SolidBrush brush(Color(100, 128, 255, 128));
-	grap.FillRectangle(&brush, m_rc.left, m_rc.top, m_rc.Width(), m_rc.Height());
-	grap.DrawRectangle(&pen, m_rc.left, m_rc.top, m_rc.Width(), m_rc.Height());
+//	Pen pen(Color(255, 128, 255, 128));
+	SolidBrush brush_in(Color(100, 128, 255, 128));
+	grap.FillRectangle(&brush_in, m_rc.left, m_rc.top, m_rc.Width(), m_rc.Height());
+
+	SolidBrush brush_out(Color(255, 128, 255, 128));
+	grap.FillRectangle(&brush_out, m_border_l.left, m_border_l.top, m_border_l.Width(), m_border_l.Height());
+	grap.FillRectangle(&brush_out, m_border_t.left, m_border_t.top, m_border_t.Width(), m_border_t.Height());
+	grap.FillRectangle(&brush_out, m_border_r.left, m_border_r.top, m_border_r.Width(), m_border_r.Height());
+	grap.FillRectangle(&brush_out, m_border_b.left, m_border_b.top, m_border_b.Width(), m_border_b.Height());
+
+//	grap.DrawRectangle(&pen, m_rc.left, m_rc.top, m_rc.Width(), m_rc.Height());
 
 	// Draw 
 }

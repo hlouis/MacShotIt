@@ -55,7 +55,11 @@ private:
 		MT_TOPLEFT,
 		MT_TOPRIGHT,
 		MT_BOTLEFT,
-		MT_BOTRIGHT
+		MT_BOTRIGHT,
+		MT_LEFT,
+		MT_RIGHT,
+		MT_BOTTOM,
+		MT_TOP
 	};
 	MOUSE_TYPE	m_mt;
 
@@ -73,6 +77,10 @@ private:
 	CPoint m_startPT;
 // 	CPoint m_endPT;
 	CRect  m_rc;
+	CRect  m_border_l;
+	CRect  m_border_r;
+	CRect  m_border_b;
+	CRect  m_border_t;
 	bool   m_bClicked;
 	ATL::CStringW m_path;
 	HCURSOR m_cursor;
